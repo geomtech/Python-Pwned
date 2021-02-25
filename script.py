@@ -13,6 +13,7 @@ import argparse
 import requests
 from tabulate import tabulate
 
+
 def check_password(login: str, hashed_password: str, api_key: str) -> list:
     # En tête HTTP
     # User-Agent pour dire quel est le client qui se connecte à leur API
@@ -21,19 +22,20 @@ def check_password(login: str, hashed_password: str, api_key: str) -> list:
         "User-Agent": "DylanAlexy_PythonScript_LPASSR",
         "hibp-api-key": api_key,
     }
-    
+
     # On met le hashed_password qui est en entrée en majuscule
     # Car les résultats retournées par l'API sont en majuscule et c'est donc utile pour la comparaison.
     hashed_password = hashed_password.upper()
-    
+
     # On récupère les 5 premiers caractères
     hash_prefix = hashed_password[:5]
 
     try:
         # On requête l'API avec les 5 premiers caractères
         # Plus d'informations sur la documentation officielle de l'API HaveIBeenPwned : https://haveibeenpwned.com/API/v3#SearchingPwnedPasswordsByRange
-        r = requests.get(f'https://api.pwnedpasswords.com/range/{ hash_prefix }', headers=headers)
-        
+        r = requests.get(
+            f'https://api.pwnedpasswords.com/range/{ hash_prefix }', headers=headers)
+
         # Pour chaque ligne retournée par l'API
         for line in r.text.split('\n'):
             # On récupère le hash (les 5 premiers caractères ne s'y trouve pas)
@@ -55,6 +57,7 @@ def check_password(login: str, hashed_password: str, api_key: str) -> list:
 
     # Si le mot de passe n'est pas trouvé, on retourne les informations login, pwned = False, et 0 car aucun mdp trouvé.
     return [login, False, 0]
+
 
 def display_results(filename: str, api_key: str) -> None:
     """
@@ -86,12 +89,14 @@ def display_results(filename: str, api_key: str) -> None:
         exit(2)
     # Erreur qui survient lorsqu'on importe un fichier non CSV et dont il n'y a pas 2 colonnes avec comme délimiteur ';' (exemple : login, hash)
     except IndexError:
-        print(f"Le fichier { filename } n'est pas un fichier CSV correctement formé")
+        print(
+            f"Le fichier { filename } n'est pas un fichier CSV correctement formé")
         print("Le format du fichier CSV doit être le suivant : login, hash")
         exit(2)
-        
+
     # On affiche le tableau (liste) results avec tabulate afin que ce soit jolie
     print(tabulate(results, headers=['Login', 'Pwned', 'Count']))
+
 
 def config(config_path: str) -> list:
     """
@@ -107,7 +112,7 @@ def config(config_path: str) -> list:
     # On ouvre un stream sur le fichier de config en lecture
     try:
         stream = open(config_path, 'r')
-        
+
         # On le charge dans la bibliothèque yaml
         cfg = yaml.safe_load(stream)
 
@@ -121,7 +126,8 @@ def config(config_path: str) -> list:
     # et on les retourne
     return api_key, filename
 
-def main() -> None:   
+
+def main() -> None:
     """
     Fonction principale
     Entrées : 
@@ -137,12 +143,14 @@ def main() -> None:
     # Parsing des arguments lancé dans le CLI
     parser = argparse.ArgumentParser()
     # Argument pour la clé d'API
-    parser.add_argument("-a", "--api_key", help="Clé d'API HaveIBeenPwned APIv3", type=str)
+    parser.add_argument("-a", "--api_key",
+                        help="Clé d'API HaveIBeenPwned APIv3", type=str)
     # Argument pour le nom du fichier CSV
-    parser.add_argument("-f", "--filename", help="Nom du fichier CSV", type=str)
+    parser.add_argument("-f", "--filename",
+                        help="Nom du fichier CSV", type=str)
     args = parser.parse_args()
 
-    # Assignation des variables avec les arguments. SI pas d'arguments, les variables seront None    
+    # Assignation des variables avec les arguments. SI pas d'arguments, les variables seront None
     api_key = args.api_key
     filename = args.filename
 
@@ -152,10 +160,11 @@ def main() -> None:
         api_key = config("config.yml")[0]
     if filename == None:
         # On va chercher dans le fichier de configuration config.yml
-        filename = config("config.yml")[1]    
+        filename = config("config.yml")[1]
 
     # On affiche les résultats
-    display_results(filename, api_key)    
+    display_results(filename, api_key)
+
 
 if __name__ == "__main__":
     # Appel de notre fonction principale
