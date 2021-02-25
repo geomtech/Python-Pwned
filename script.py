@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Auteur(s) : Dylan DE MIRANDA (dylandemiranda@gmail.com) & Alexy DA CRUZ (adacruz@geomtech.fr)
+# Auteur(s) : Dylan DE MIRANDA (dylandemiranda@gmail.com)
+#             Alexy DA CRUZ (adacruz@geomtech.fr)
 # Version : 0.1
 # Date : 04/02/2021
-# Thème du script : Vérification de mots de passe contenu dans un fichier CSV avec l'API de Have I Been Pwned.
+# Thème du script : Vérification de mots de passe contenu
+#                   dans un fichier CSV avec l'API de Have I Been Pwned.
 
 # Importations des packages requis
 import yaml
@@ -15,54 +17,75 @@ from tabulate import tabulate
 
 
 def check_password(login: str, hashed_password: str, api_key: str) -> list:
+    """
+    Fonction qui fait un check du hash avec l'api
+    Entrées :
+      login : nom du compte
+      hashed_password : mot de passe hashé
+      api_key : clé d'api haveibeenpwned
+    Sorties :
+      list : Liste contenant le compte, pwned sur vrai ou faux et le
+             compte de mdp trouvé
+    """
+
     # En tête HTTP
     # User-Agent pour dire quel est le client qui se connecte à leur API
-    # hibp-api-key : clé d'API HaveIbeenPwned mais apparement inutile, mais peut-être un rate limit donc je l'ai mis quand même.
+    # hibp-api-key : clé d'API HaveIbeenPwned mais apparement inutile,
+    #      mais peut-être un rate limit donc je l'ai mis quand même.
     headers = {
         "User-Agent": "DylanAlexy_PythonScript_LPASSR",
         "hibp-api-key": api_key,
     }
 
     # On met le hashed_password qui est en entrée en majuscule
-    # Car les résultats retournées par l'API sont en majuscule et c'est donc utile pour la comparaison.
+    # Car les résultats retournées par l'API sont en majuscule et
+    # c'est donc utile pour la comparaison.
     hashed_password = hashed_password.upper()
 
     # On récupère les 5 premiers caractères
     hash_prefix = hashed_password[:5]
 
     try:
+        url = "https://api.pwnedpasswords.com/range/"
         # On requête l'API avec les 5 premiers caractères
-        # Plus d'informations sur la documentation officielle de l'API HaveIBeenPwned : https://haveibeenpwned.com/API/v3#SearchingPwnedPasswordsByRange
+        # Plus d'informations sur la documentation officielle de
+        # l'API HaveIBeenPwned
         r = requests.get(
-            f'https://api.pwnedpasswords.com/range/{ hash_prefix }', headers=headers)
+            f'{url}{ hash_prefix }', headers=headers)
 
         # Pour chaque ligne retournée par l'API
         for line in r.text.split('\n'):
-            # On récupère le hash (les 5 premiers caractères ne s'y trouve pas)
+            # On récupère le hash
+            # (les 5 premiers caractères ne s'y trouve pas)
             hash_suffix = line.split(':')[0]
             # On récupère le compte des mots de passes trouvées
             password_count = line.split(':')[1]
-            # On concataine les 5 premiers caractères à la suite avec le hash trouvé dans l'API
+            # On concataine les 5 premiers caractères à la suite avec
+            # le hash trouvé dans l'API
             hash_complete_password = hash_prefix + hash_suffix
-            # On compare le hash qu'on demande à vérifier avec ce qu'il trouve dans l'API
+            # On compare le hash qu'on demande à vérifier avec ce
+            # qu'il trouve dans l'API
             if (hashed_password == hash_complete_password):
                 # Si c'est le même, c'est que le mot de passe est pwned.
-                # On retourne donc les informations login, pwned = True, et le compte.
+                # On retourne donc les informations
+                # login, pwned = True, et le compte.
                 return [login, True, int(password_count)]
     except requests.ConnectionError:
         print("Erreur lors de la connexion à l'API HaveIBeenPwned")
-        print("Vérifiez votre connexion internet, votre proxy ou votre pare-feu")
-        print("Si vous ne savez pas quoi faire, contactez votre administrateur")
+        print("Vérifiez votre connexion internet")
+        print("Si vous ne savez pas quoi faire, \
+            contactez votre administrateur")
         exit(2)
 
-    # Si le mot de passe n'est pas trouvé, on retourne les informations login, pwned = False, et 0 car aucun mdp trouvé.
+    # Si le mot de passe n'est pas trouvé, on retourne les informations
+    # login, pwned = False, et 0 car aucun mdp trouvé.
     return [login, False, 0]
 
 
 def display_results(filename: str, api_key: str) -> None:
     """
     Fonction qui affiche les résultats
-    Entrées : 
+    Entrées :
         filename : Chemin du fichier CSV de base de données des utilisateurs
         api_key  : Clé d'API HaveIBeenPwned
     Sorties :
@@ -81,20 +104,24 @@ def display_results(filename: str, api_key: str) -> None:
             next(user_database)
             # Pour chaque ligne, donc chaque user dans le fichier
             for user in user_database:
-                # On ajoute dans la liste results le resultat pour chaque utilisateur la liste retourné par la fonction check_password
+                # On ajoute dans la liste results le resultat pour chaque
+                # utilisateur la liste retourné par la fonction check_password
                 results.append(check_password(user[0], user[1], api_key))
     # Erreur lorsque le fichier CSV n'existe pas
     except FileNotFoundError:
         print(f"Le fichier { filename } n'existe pas")
         exit(2)
-    # Erreur qui survient lorsqu'on importe un fichier non CSV et dont il n'y a pas 2 colonnes avec comme délimiteur ';' (exemple : login, hash)
+    # Erreur qui survient lorsqu'on importe un fichier non CSV et dont
+    # il n'y a pas 2 colonnes avec comme délimiteur ';' (exemple : login, hash)
     except IndexError:
         print(
-            f"Le fichier { filename } n'est pas un fichier CSV correctement formé")
+            f"Le fichier { filename } n'est pas \
+                un fichier CSV correctement formé")
         print("Le format du fichier CSV doit être le suivant : login, hash")
         exit(2)
 
-    # On affiche le tableau (liste) results avec tabulate afin que ce soit jolie
+    # On affiche le tableau (liste) results
+    # avec tabulate afin que ce soit jolie
     print(tabulate(results, headers=['Login', 'Pwned', 'Count']))
 
 
@@ -106,6 +133,7 @@ def config(config_path: str) -> list:
     Sorties :
         list : liste contenant la clé d'API et le nom du fichier
     """
+
     api_key = ""
     filename = ""
 
@@ -130,7 +158,7 @@ def config(config_path: str) -> list:
 def main() -> None:
     """
     Fonction principale
-    Entrées : 
+    Entrées :
         Aucune
     Sorties :
         Aucune
@@ -150,15 +178,16 @@ def main() -> None:
                         help="Nom du fichier CSV", type=str)
     args = parser.parse_args()
 
-    # Assignation des variables avec les arguments. SI pas d'arguments, les variables seront None
+    # Assignation des variables avec les arguments. SI pas d'arguments,
+    # les variables seront None
     api_key = args.api_key
     filename = args.filename
 
     # Si les variables retournent None (donc aucun argument)
-    if api_key == None:
+    if api_key is None:
         # On va chercher dans le fichier de configuration config.yml
         api_key = config("config.yml")[0]
-    if filename == None:
+    if filename is None:
         # On va chercher dans le fichier de configuration config.yml
         filename = config("config.yml")[1]
 
